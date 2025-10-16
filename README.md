@@ -1,6 +1,6 @@
-# Python Flask REST API - Posts & Comments
+# Python Flask REST API - Posts, Comments & Likes
 
-A Flask REST API that provides endpoints for creating posts (text and/or images) and adding comments to posts. This API demonstrates proper input validation, error handling, and structured responses.
+A Flask REST API that provides endpoints for creating posts (text and/or images), adding comments to posts, and liking posts. This API demonstrates proper input validation, error handling, and structured responses with comprehensive Swagger documentation.
 
 ## 🚀 Features
 
@@ -18,7 +18,15 @@ A Flask REST API that provides endpoints for creating posts (text and/or images)
 - **CRUD operations** for comments (Create, Read, Delete)
 - **JSON-based** request/response format
 
+### Likes API
+- **Like/Unlike posts** with toggle functionality
+- **Track user likes** per post
+- **Get like statistics** for posts
+- **User like history** tracking
+- **Check like status** for specific user-post combinations
+
 ### General Features
+- **Swagger/OpenAPI documentation** available at `/api/v1/docs/`
 - **Comprehensive error handling** with detailed error messages
 - **Request logging** with rotating file logs
 - **Input validation** using Schematics
@@ -124,6 +132,156 @@ Retrieve a specific comment by ID (placeholder implementation).
 
 Delete a specific comment by ID (placeholder implementation).
 
+### Likes Endpoints
+
+#### Like/Unlike Post
+**POST** `/posts/<post_id>/like`
+
+Toggle like status for a post by a user. If the user hasn't liked the post, it will be liked. If already liked, it will be unliked.
+
+**Request Format:** `application/json`
+
+**Body Parameters:**
+- `user_id` (required, string): ID of the user performing the like action
+
+**Example Request:**
+```bash
+curl -X POST http://localhost:5000/api/v1/posts/my-post-id/like \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user123"}'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Post liked successfully",
+  "data": {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "post_id": "my-post-id",
+    "user_id": "user123",
+    "is_liked": true,
+    "action": "liked",
+    "created_at": "2023-10-16T15:40:15.123456",
+    "updated_at": "2023-10-16T15:40:15.123456"
+  }
+}
+```
+
+#### Get Post Likes
+**GET** `/posts/<post_id>/likes`
+
+Get all likes for a specific post and total like count.
+
+**Example Request:**
+```bash
+curl -X GET http://localhost:5000/api/v1/posts/my-post-id/likes
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Likes for post my-post-id",
+  "data": {
+    "post_id": "my-post-id",
+    "total_likes": 3,
+    "likes": [
+      {
+        "id": "like-id-1",
+        "post_id": "my-post-id",
+        "user_id": "user123",
+        "is_liked": true,
+        "created_at": "2023-10-16T15:40:15.123456",
+        "updated_at": "2023-10-16T15:40:15.123456"
+      }
+    ]
+  }
+}
+```
+
+#### Check Like Status
+**GET** `/posts/<post_id>/like/status?user_id=<user_id>`
+
+Check if a specific user has liked a post.
+
+**Query Parameters:**
+- `user_id` (required): ID of the user to check like status for
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:5000/api/v1/posts/my-post-id/like/status?user_id=user123"
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Like status retrieved",
+  "data": {
+    "post_id": "my-post-id",
+    "user_id": "user123",
+    "is_liked": true
+  }
+}
+```
+
+#### Get User Likes
+**GET** `/likes/users/<user_id>`
+
+Get all posts liked by a specific user.
+
+**Example Request:**
+```bash
+curl -X GET http://localhost:5000/api/v1/likes/users/user123
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Posts liked by user user123",
+  "data": {
+    "user_id": "user123",
+    "total_likes": 5,
+    "liked_posts": [
+      {
+        "id": "like-id-1",
+        "post_id": "post-1",
+        "user_id": "user123",
+        "is_liked": true,
+        "created_at": "2023-10-16T15:40:15.123456",
+        "updated_at": "2023-10-16T15:40:15.123456"
+      }
+    ]
+  }
+}
+```
+
+## 📖 API Documentation
+
+### Swagger/OpenAPI Documentation
+
+The API includes comprehensive Swagger documentation available at:
+```
+http://localhost:5000/api/v1/docs/
+```
+
+The Swagger UI provides:
+- **Interactive API testing** - Test endpoints directly from the browser
+- **Request/Response examples** - See expected data formats
+- **Parameter documentation** - Detailed parameter descriptions
+- **Error response examples** - Common error scenarios
+- **Model schemas** - Data structure definitions
+
+### API Versioning
+
+All API endpoints are versioned under `/api/v1/` to ensure backward compatibility:
+- **Swagger docs**: `/api/v1/docs/`
+- **Posts**: `/api/v1/posts/`
+- **Comments**: `/api/v1/comments/`  
+- **Likes**: `/api/v1/likes/`
+
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
@@ -169,6 +327,11 @@ The server will start on `http://localhost:5000` by default.
 
 The project includes test scripts to validate the API functionality:
 
+### Run Like Tests
+```bash
+python test_likes.py
+```
+
 ### Run Comment Tests
 ```bash
 python test_comments.py
@@ -183,21 +346,33 @@ python validate_comments.py
 
 **Create a text-only post:**
 ```bash
-curl -X POST http://localhost:5000/posts \
+curl -X POST http://localhost:5000/api/v1/posts \
   -F "content=This is a text-only post"
 ```
 
 **Create an image-only post:**
 ```bash
-curl -X POST http://localhost:5000/posts \
+curl -X POST http://localhost:5000/api/v1/posts \
   -F "image=@image.jpg"
 ```
 
 **Add a comment:**
 ```bash
-curl -X POST http://localhost:5000/posts/test-post-123/comments \
+curl -X POST http://localhost:5000/api/v1/posts/test-post-123/comments \
   -H "Content-Type: application/json" \
   -d '{"content": "Nice post!", "author": "Alice"}'
+```
+
+**Like a post:**
+```bash
+curl -X POST http://localhost:5000/api/v1/posts/test-post-123/like \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user123"}'
+```
+
+**Check like status:**
+```bash
+curl -X GET "http://localhost:5000/api/v1/posts/test-post-123/like/status?user_id=user123"
 ```
 
 ## 📁 Project Structure
@@ -208,14 +383,20 @@ curl -X POST http://localhost:5000/posts/test-post-123/comments \
 ├── api/
 │   ├── __init__.py          # Flask app initialization and route imports
 │   ├── config.py            # Configuration settings
+│   ├── swagger_config.py    # Swagger/OpenAPI configuration
+│   ├── swagger_routes.py    # Swagger-documented API routes
 │   ├── posts/
 │   │   ├── __init__.py
 │   │   └── create_post.py   # Post creation and management routes
 │   ├── comments/
 │   │   ├── __init__.py
 │   │   └── comment_routes.py # Comment CRUD operations
+│   ├── likes/
+│   │   ├── __init__.py
+│   │   └── like_routes.py   # Like/unlike operations
 │   └── examples/            # Example routes and utilities
 ├── test_comments.py         # Comment API validation tests
+├── test_likes.py           # Like API validation tests
 ├── validate_comments.py     # Additional comment validation
 └── uploads/                 # Directory for uploaded images (auto-created)
 ```

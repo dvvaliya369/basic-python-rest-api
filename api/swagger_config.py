@@ -30,10 +30,12 @@ except Exception:
 # Create namespaces for organizing the API
 posts_ns = Namespace('posts', description='Post operations', path='/posts')
 comments_ns = Namespace('comments', description='Comment operations', path='/comments')
+likes_ns = Namespace('likes', description='Like operations', path='/likes')
 
 # Register namespaces
 api.add_namespace(posts_ns)
 api.add_namespace(comments_ns)
+api.add_namespace(likes_ns)
 
 # Define Swagger models for request/response documentation
 
@@ -86,6 +88,45 @@ error_model = api.model('Error', {
     'success': fields.Boolean(required=True, description='Operation success status (always false for errors)'),
     'error': fields.String(required=True, description='Error message'),
     'details': fields.Raw(description='Additional error details (optional)')
+})
+
+# Like Models
+like_model = api.model('Like', {
+    'id': fields.String(required=True, description='Like unique identifier'),
+    'post_id': fields.String(required=True, description='ID of the post that was liked'),
+    'user_id': fields.String(required=True, description='ID of the user who liked the post'),
+    'is_liked': fields.Boolean(required=True, description='Like status (true for liked, false for unliked)'),
+    'action': fields.String(description='Action performed (liked/unliked)'),
+    'created_at': fields.DateTime(required=True, description='Creation timestamp'),
+    'updated_at': fields.DateTime(description='Last update timestamp')
+})
+
+like_input_model = api.model('LikeInput', {
+    'user_id': fields.String(required=True, description='ID of the user performing the like action', max_length=100)
+})
+
+like_response_model = api.model('LikeResponse', {
+    'success': fields.Boolean(required=True, description='Operation success status'),
+    'message': fields.String(required=True, description='Response message'),
+    'data': fields.Nested(like_model, description='Like data')
+})
+
+likes_list_response_model = api.model('LikesListResponse', {
+    'success': fields.Boolean(required=True, description='Operation success status'),
+    'message': fields.String(required=True, description='Response message'),
+    'data': fields.Raw(description='Likes list data')
+})
+
+like_status_model = api.model('LikeStatus', {
+    'post_id': fields.String(required=True, description='Post ID'),
+    'user_id': fields.String(required=True, description='User ID'),
+    'is_liked': fields.Boolean(required=True, description='Whether the user has liked this post')
+})
+
+like_status_response_model = api.model('LikeStatusResponse', {
+    'success': fields.Boolean(required=True, description='Operation success status'),
+    'message': fields.String(required=True, description='Response message'),
+    'data': fields.Nested(like_status_model, description='Like status data')
 })
 
 # File upload parser for posts with images

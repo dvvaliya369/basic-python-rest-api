@@ -46,3 +46,4 @@ except ImportError as e:
     from api.examples import get_example
     from api.posts import create_post
     from api.comments import comment_routes
+    from api.likes import like_routes
