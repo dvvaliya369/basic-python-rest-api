@@ -27,3 +27,4 @@ def page_not_found(e):
 
 # Import the routes from all controllers
 from api.examples import get_example
+from api.posts import create_post
