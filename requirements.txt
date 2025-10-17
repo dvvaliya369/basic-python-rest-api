@@ -3,3 +3,5 @@ Werkzeug==2.3.7
 schematics==2.1.1
 flask-restx==1.1.0
 flask-swagger-ui==4.11.1
+pymongo==4.5.0
+motor==3.3.1
