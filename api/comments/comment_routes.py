@@ -2,18 +2,8 @@ import uuid
 from datetime import datetime
 from flask import request, jsonify
 from api import app
-from schematics.models import Model
-from schematics.types import StringType, DateTimeType, UUIDType
+from api.models import CommentModel
 from schematics.exceptions import ModelConversionError, ModelValidationError
-
-
-class Comment(Model):
-    """Validation model for Comment"""
-    id = UUIDType()
-    post_id = StringType(required=True, max_length=100)
-    content = StringType(required=True, min_length=1, max_length=2000)
-    author = StringType(max_length=100)  # Optional author name
-    created_at = DateTimeType()
 
 
 @app.route('/posts/<post_id>/comments', methods=['POST'])
@@ -46,18 +36,14 @@ def add_comment_to_post(post_id):
                 'error': 'Comment content is required'
             }), 400
         
-        # Create comment data
+        # Create comment using MongoDB model
         comment_data = {
-            'id': uuid.uuid4(),
             'post_id': post_id,
             'content': content,
-            'author': author,
-            'created_at': datetime.utcnow()
+            'author': author
         }
         
-        # Validate the comment model
-        comment = Comment(comment_data)
-        comment.validate()
+        created_comment = CommentModel.create(comment_data)
         
         app.logger.info(f'Comment added to post {post_id} - Author: {author or "Anonymous"}')
         
@@ -65,13 +51,7 @@ def add_comment_to_post(post_id):
         response_data = {
             'success': True,
             'message': 'Comment added successfully',
-            'data': {
-                'id': str(comment.id),
-                'post_id': comment.post_id,
-                'content': comment.content,
-                'author': comment.author,
-                'created_at': comment.created_at.isoformat() if comment.created_at else None
-            }
+            'data': created_comment
         }
         
         return jsonify(response_data), 201
@@ -92,6 +72,13 @@ def add_comment_to_post(post_id):
             'details': mve.messages
         }), 400
         
+    except ValueError as ve:
+        app.logger.exception(f'Value error: {str(ve)}')
+        return jsonify({
+            'success': False,
+            'error': str(ve)
+        }), 400
+        
     except Exception as e:
         app.logger.exception(f'Unexpected error adding comment: {str(e)}')
         return jsonify({
@@ -105,24 +92,39 @@ def get_comments_for_post(post_id):
     """Get all comments for a specific post"""
     
     try:
-        # In a real implementation, this would query a database
-        # For now, return a placeholder response
+        # Get pagination parameters
+        limit = int(request.args.get('limit', 50))
+        skip = int(request.args.get('skip', 0))
         
-        app.logger.info(f'Fetching comments for post {post_id}')
+        # Validate pagination parameters
+        limit = min(limit, 100)  # Maximum 100 comments per request
+        skip = max(skip, 0)  # Skip cannot be negative
         
-        # Placeholder response - in real implementation, query database
+        comments = CommentModel.get_by_post_id(post_id, limit=limit, skip=skip)
+        total_comments = CommentModel.count_by_post_id(post_id)
+        
+        app.logger.info(f'Fetching comments for post {post_id} - Total: {total_comments}')
+        
         response_data = {
             'success': True,
             'message': f'Comments for post {post_id}',
             'data': {
                 'post_id': post_id,
-                'comments': [],  # This would contain actual comments from database
-                'total_comments': 0
-            },
-            'note': 'This is a placeholder - implement with actual database to store and retrieve comments'
+                'comments': comments,
+                'total_comments': total_comments,
+                'limit': limit,
+                'skip': skip,
+                'count': len(comments)
+            }
         }
         
         return jsonify(response_data), 200
+        
+    except ValueError as ve:
+        return jsonify({
+            'success': False,
+            'error': 'Invalid pagination parameters'
+        }), 400
         
     except Exception as e:
         app.logger.exception(f'Unexpected error fetching comments for post {post_id}: {str(e)}')
@@ -137,22 +139,20 @@ def get_comment(comment_id):
     """Get a specific comment by ID"""
     
     try:
-        # In a real implementation, this would query a database
+        comment = CommentModel.get_by_id(comment_id)
+        
+        if not comment:
+            return jsonify({
+                'success': False,
+                'error': 'Comment not found'
+            }), 404
         
         app.logger.info(f'Fetching comment {comment_id}')
         
-        # Placeholder response - in real implementation, query database
         response_data = {
             'success': True,
-            'message': f'Comment {comment_id}',
-            'data': {
-                'id': comment_id,
-                'post_id': 'placeholder-post-id',
-                'content': 'This would be the actual comment content from database',
-                'author': 'Placeholder Author',
-                'created_at': datetime.utcnow().isoformat()
-            },
-            'note': 'This is a placeholder - implement with actual database'
+            'message': 'Comment retrieved successfully',
+            'data': comment
         }
         
         return jsonify(response_data), 200
@@ -170,15 +170,19 @@ def delete_comment(comment_id):
     """Delete a specific comment by ID"""
     
     try:
-        # In a real implementation, this would delete from database
+        deleted = CommentModel.delete_by_id(comment_id)
         
-        app.logger.info(f'Deleting comment {comment_id}')
+        if not deleted:
+            return jsonify({
+                'success': False,
+                'error': 'Comment not found'
+            }), 404
         
-        # Placeholder response - in real implementation, delete from database
+        app.logger.info(f'Comment {comment_id} deleted successfully')
+        
         response_data = {
             'success': True,
-            'message': f'Comment {comment_id} deleted successfully',
-            'note': 'This is a placeholder - implement with actual database'
+            'message': 'Comment deleted successfully'
         }
         
         return jsonify(response_data), 200

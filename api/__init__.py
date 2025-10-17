@@ -29,6 +29,9 @@ log.addHandler(handler)
 def page_not_found(e):
     return "404 not found", 404
 
+# Import health check route
+from api.health import health_check
+
 # Register Swagger API blueprint
 try:
     from api.swagger_config import api_blueprint
